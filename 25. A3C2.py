@@ -112,7 +112,7 @@ class A3CWorker:
     def train(self, n_epi):
         s, a, r, s_prime, done_mask = self.make_batch()
 
-        for _ in range(self.K):
+        if n_epi % 200 == 0:
             values = self.local_critic(s).squeeze()
 
             # ✅ TD-Target (Discounted Return) 계산
@@ -135,6 +135,7 @@ class A3CWorker:
             actor_loss = (-torch.log(pi_a) * advantage).mean()
             critic_loss = F.mse_loss(values, returns)
 
+
             self.actor_optimizer.zero_grad()
             actor_loss.backward(retain_graph=True)
             for global_param, local_param in zip(self.global_actor.parameters(), self.local_actor.parameters()):
@@ -150,9 +151,9 @@ class A3CWorker:
                     global_param._grad = local_param.grad.clone()
             self.critic_optimizer.step()
 
-            if n_epi % 200 == 0:
-                self.local_actor.load_state_dict(self.global_actor.state_dict())
-                self.local_critic.load_state_dict(self.global_critic.state_dict())
+
+            self.local_actor.load_state_dict(self.global_actor.state_dict())
+            self.local_critic.load_state_dict(self.global_critic.state_dict())
 
     def run(self):
         for n_epi in tqdm(range(1000), desc=f"Worker {id(self)}", position=None, leave=True):
@@ -246,7 +247,6 @@ if __name__ == "__main__":
             # ✅ NaN 방지 및 확률 값 확인
             probs = torch.clamp(global_actor(state_tensor), min=1e-8)
 
-            # ✅ ε-greedy 전략 적용 (5% 확률로 랜덤 선택)
             action = torch.argmax(probs).item()
 
             # ✅ 액션 수행
