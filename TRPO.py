@@ -15,8 +15,8 @@ class Critic(nn.Module):
         self.fc_v = nn.Linear(32, 1)
 
     def forward(self, x):
-        x = F.tanh(self.fc1(x))
-        x = F.tanh(self.fc2(x))
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         v = self.fc_v(x)
         return v
 
@@ -29,8 +29,8 @@ class Actor(nn.Module):
         self.pi = nn.Linear(32, action_dim)
 
     def forward(self, x, softmax_dim=-1):
-        x = F.leaky_relu(self.fc1(x))
-        x = F.leaky_relu(self.fc2(x))
+        x = F.tanh(self.fc1(x))
+        x = F.tanh(self.fc2(x))
         logits = self.pi(x)
         probs = F.softmax(logits, dim=softmax_dim)
         return probs
@@ -153,10 +153,9 @@ class TRPO(nn.Module):
 
         pi_new = self.pi(states)
 
-        # Calculate KL divergence: KL(old_pi || new_pi)
         dist_new = torch.distributions.Categorical(probs=pi_new)
         dist_old = torch.distributions.Categorical(probs=pi_old.detach())
-        kl = torch.distributions.kl_divergence(dist_old, dist_new).mean()
+        kl = torch.distributions.kl_divergence(dist_new, dist_old).mean()
 
         # Restore original parameters
         for i, param in enumerate(self.pi.parameters()):
@@ -168,7 +167,7 @@ class TRPO(nn.Module):
         # 2️⃣ Fisher Information Matrix의 역행렬 곱 계산
         step_direction = self.conjugate_gradient(policy_grad, state)
         old_gHg = torch.dot(policy_grad, step_direction)
-        gHg = torch.max(old_gHg, torch.tensor(1, device=old_gHg.device))
+        gHg = torch.max(old_gHg, torch.tensor(0.001, device=old_gHg.device))
 
         # 3️⃣ Step Size 조정 (Line Search)
         step_size = torch.sqrt(2 * self.delta / gHg)
@@ -211,7 +210,9 @@ class TRPO(nn.Module):
                 advantage_lst.append([advantage])
             advantage_lst.reverse()
 
-            self.advantage = torch.tensor(advantage_lst, dtype=torch.float).to(self.device)
+            advantage = torch.tensor(advantage_lst, dtype=torch.float).to(self.device)
+            advantage = (advantage - advantage.mean()) / (advantage.std() + 1e-8)
+
 
             # 정책 업데이트를 위한 손실 계산
             pi = self.pi(s, softmax_dim=-1)  # 현재 정책 확률
@@ -227,6 +228,6 @@ class TRPO(nn.Module):
             value_loss.backward()
             self.v_optimizer.step()
 
-            grads = torch.autograd.grad(policy_loss.mean(), self.pi.parameters())
-            grad_vector = torch.cat([g.view(-1) for g in grads]).detach()
-            self.update(grad_vector, s)
+        grads = torch.autograd.grad(policy_loss.mean(), self.pi.parameters())
+        grad_vector = torch.cat([g.view(-1) for g in grads]).detach()
+        self.update(grad_vector, s)
