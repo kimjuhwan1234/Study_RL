@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+from copy import deepcopy
 
 warnings.filterwarnings("ignore")
 
@@ -15,8 +16,8 @@ class Critic(nn.Module):
         self.fc_v = nn.Linear(32, 1)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = F.tanh(self.fc1(x))
+        x = F.tanh(self.fc2(x))
         v = self.fc_v(x)
         return v
 
@@ -37,8 +38,8 @@ class Actor(nn.Module):
 
 
 class TRPO(nn.Module):
-    def __init__(self, state_dim, action_dim, value_lr=0.003, gamma=0.99, lmbda=0.95, num_value_updates=3, delta=0.01,
-                 damping=0.1, cg_iters=10):
+    def __init__(self, state_dim, action_dim, value_lr=1e-3, gamma=0.99, lmbda=0.97, num_value_updates=3, delta=0.01,
+                 damping=0.1, cg_iters=15):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.v = Critic(state_dim).to(self.device)
@@ -53,11 +54,12 @@ class TRPO(nn.Module):
         self.cg_iters = cg_iters
 
         self.data = []
+        self.stepsize = []
         self.alpha = 0.5
-        self.max_kl = 0.05
+        self.max_kl = 0.02
 
     def select_action(self, state, rewards_log=None):
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        state = torch.FloatTensor(state).to(self.device)
         probs = self.pi(state)
         dist = torch.distributions.Categorical(probs)
 
@@ -66,7 +68,7 @@ class TRPO(nn.Module):
         else:
             action = dist.sample()
 
-        action_prob = probs[0, action].item()
+        action_prob = probs[action].detach().item()
         return action.item(), action_prob
 
     def put_data(self, item):
@@ -96,14 +98,12 @@ class TRPO(nn.Module):
     def fisher_vector_product(self, vector, state):
         """FIM(Fisher Information Matrix)와 벡터 곱"""
         pi_new = self.pi(state)
-        dist_new = torch.distributions.Categorical(probs=pi_new)
-        dist_old = torch.distributions.Categorical(probs=self.prob_a.detach())
-        kl = torch.distributions.kl_divergence(dist_old, dist_new).mean()
+        kl = self.categorical_kl_divergence(self.prob_a, pi_new)
 
         # 1️⃣ KL-divergence의 Gradient 계산
         grads = torch.autograd.grad(kl, self.pi.parameters(), create_graph=True, retain_graph=True)
         flat_grad_kl = torch.cat([grad.view(-1) for grad in grads])
-        kl_v = (flat_grad_kl * vector).sum()
+        kl_v = torch.dot(flat_grad_kl, vector)
 
         # 2️⃣ Fisher Information Matrix와 벡터 곱 (2차 미분)
         grads = torch.autograd.grad(kl_v, self.pi.parameters(), retain_graph=True)
@@ -124,42 +124,42 @@ class TRPO(nn.Module):
 
             x += alpha * p
             r -= alpha * fisher_p
+
             new_r_dot_r = torch.dot(r, r)
+            if new_r_dot_r < residual_tol:
+                break
 
             beta = new_r_dot_r / (r_dot_r + 1e-8)
-
             p = r + beta * p
             r_dot_r = new_r_dot_r
 
-            if r_dot_r < residual_tol:
-                break
-
         return x
 
+    def categorical_kl_divergence(self, pi_old, pi_new, eps=1e-8):
+        """
+        KL(pi_old || pi_new) 수식 기반 직접 계산 (batch-wise)
+        - pi_old, pi_new: shape (batch_size, num_actions)
+        """
+        pi_old = pi_old.clamp(min=eps)
+        pi_new = pi_new.clamp(min=eps)
+
+        kl = (pi_old * (pi_old.log() - pi_new.log())).sum(dim=1)  # sum over action dimension
+        return kl.mean()  # 평균 KL over batch
+
     def line_search(self, new_params, states):
-        # Get new policy distribution
-        with torch.no_grad():
-            pi_old = self.pi(states).detach()
-
-        # Temporarily set new parameters
+        # 파라미터 vector -> 임시 정책 생성
+        pi_backup = deepcopy(self.pi)  # ✅ 완전히 복사
         offset = 0
-        old_params_backup = {i: param.data.clone() for i, param in enumerate(self.pi.parameters())}
-
-        for i, param in enumerate(self.pi.parameters()):
-            old_params_backup[i] = param.data.clone()
+        for param in pi_backup.parameters():
             numel = param.numel()
             param.data.copy_(new_params[offset:offset + numel].view(param.shape))
             offset += numel
 
-        pi_new = self.pi(states)
+        with torch.no_grad():
+            # pi_old = self.pi(states).detach()
+            pi_new = pi_backup(states)  # ✅ 복사본 모델로 forward
 
-        dist_new = torch.distributions.Categorical(probs=pi_new)
-        dist_old = torch.distributions.Categorical(probs=pi_old.detach())
-        kl = torch.distributions.kl_divergence(dist_new, dist_old).mean()
-
-        # Restore original parameters
-        for i, param in enumerate(self.pi.parameters()):
-            param.data.copy_(old_params_backup[i])
+        kl = self.categorical_kl_divergence(pi_new, self.prob_a)
 
         return kl
 
@@ -167,10 +167,15 @@ class TRPO(nn.Module):
         # 2️⃣ Fisher Information Matrix의 역행렬 곱 계산
         step_direction = self.conjugate_gradient(policy_grad, state)
         old_gHg = torch.dot(policy_grad, step_direction)
-        gHg = torch.max(old_gHg, torch.tensor(0.001, device=old_gHg.device))
+        if old_gHg.item() < 0.001:
+            old_gHg = torch.tensor(0.01).to(self.device)
+
+        gHg = old_gHg
 
         # 3️⃣ Step Size 조정 (Line Search)
         step_size = torch.sqrt(2 * self.delta / gHg)
+
+        self.stepsize.append(step_size)
         update_vector = step_size * step_direction
 
         # 옵티마이저에서 기울기 초기화
@@ -181,13 +186,30 @@ class TRPO(nn.Module):
             param_vector = torch.cat([p.view(-1) for p in self.pi.parameters()])
             new_param_vector = param_vector + self.alpha * update_vector
 
-            # KL 제약 만족할 때까지 beta 감소
-            while self.line_search(new_param_vector, state) > self.max_kl:
-                print(old_gHg, gHg)
-                self.alpha *= self.alpha
-                new_param_vector = param_vector + self.alpha * update_vector
+        success = False
+        i = 0
+        while step_size.item() > 0.5:
+            if i == 0:
+                print("Before: ", step_size, gHg, self.alpha)
+                i = 1
+            step_size *= self.alpha
+            self.alpha *= self.alpha
+            new_param_vector = param_vector + self.alpha * update_vector
 
-            # 새로운 파라미터 적용
+            if self.alpha < 0.0625:
+                print("[Line Search] Failed: KL constraint not satisfied.")
+                success = False
+                break
+
+        else:
+            success = True  # while 안 들어가도 이 위치로 들어옴
+
+        if i == 1:
+            print("After: ", step_size, gHg, self.alpha)
+
+        # 파라미터 적용은 성공했을 때만
+        if success:
+            print('update')
             offset = 0
             for param in self.pi.parameters():
                 numel = param.numel()
@@ -211,23 +233,23 @@ class TRPO(nn.Module):
             advantage_lst.reverse()
 
             advantage = torch.tensor(advantage_lst, dtype=torch.float).to(self.device)
-            advantage = (advantage - advantage.mean()) / (advantage.std() + 1e-8)
-
+            # advantage = (advantage - advantage.mean()) / (advantage.std() + 1e-8)
 
             # 정책 업데이트를 위한 손실 계산
             pi = self.pi(s, softmax_dim=-1)  # 현재 정책 확률
             pi_a = pi.gather(1, a)  # 실행한 액션의 확률
             ratio = torch.exp(torch.log(pi_a) - torch.log(self.prob_a))  # 확률 비율 계산
 
-            # PPO 클리핑 적용
-            policy_loss = - ratio * advantage
+            surr1 = ratio * advantage
+            policy_loss = - surr1
             value_loss = F.smooth_l1_loss(td_target.detach(), self.v(s))
 
             # 가치 함수 손실 계산 (MSE)
             self.v_optimizer.zero_grad()
-            value_loss.backward()
+            value_loss.mean().backward()
             self.v_optimizer.step()
 
         grads = torch.autograd.grad(policy_loss.mean(), self.pi.parameters())
         grad_vector = torch.cat([g.view(-1) for g in grads]).detach()
+        self.alpha = 0.5
         self.update(grad_vector, s)
