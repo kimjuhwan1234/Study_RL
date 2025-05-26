@@ -3,7 +3,7 @@
   <component name="Black">
     <option name="sdkName" value="ETC" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="research" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="myenv" project-jdk-type="Python SDK" />
   <component name="PyCharmDSProjectLayout">
     <option name="id" value="JupyterRightHiddenStructureLayout" />
   </component>
