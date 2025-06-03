@@ -5,20 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3b078512-84c0-4bb6-807c-c8ae31abde7d" name="Changes" comment=".">
-      <change beforePath="$PROJECT_DIR$/.gitattributes" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/Study_RL.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/12. Monte Carlo method-checkpoint.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/19. DQN variant-checkpoint.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/20. Dueling DQN-checkpoint.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/22. REINFORCE-checkpoint.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/30. PPO-checkpoint.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/8. Value_Iteration-checkpoint.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/9. Policy Iteration-checkpoint.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/images/MC.png" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/25__5__30___11_25__________.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/25__5__30__오전_11_25,_체크아웃_전에_커밋되지_않은_변경_내용_[변경]/shelved.patch" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/25__5__30__오전_11_25,_체크아웃_전에_커밋되지_않은_변경_내용_[변경]1/shelved.patch" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,26 +51,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.25. A3C2 (1).executor": "Run",
-    "Python.25. A3C2.executor": "Debug",
-    "Python.A3C.executor": "Run",
-    "Python.A3C22.executor": "Run",
-    "Python.TARN_MAPPO_run_1y.executor": "Run",
-    "Python.TARN_MAPPO_run_1y_gamma_combined.executor": "Run",
-    "Python.TARN_MAPPO_run_3m_gamma_combined.executor": "Debug",
-    "Python.TARN_MAPPO_run_3m_gamma_combined_sharpe.executor": "Run",
-    "Python.hugging_face_upload.executor": "Run",
-    "Python.scratch.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/Users/asas4/바탕 화면/Dokumen/GitHub/Study/Study_RL",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.25. A3C2 (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.25. A3C2.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.A3C.executor&quot;: &quot;Run&quot;,
+    &quot;Python.A3C22.executor&quot;: &quot;Run&quot;,
+    &quot;Python.TARN_MAPPO_run_1y.executor&quot;: &quot;Run&quot;,
+    &quot;Python.TARN_MAPPO_run_1y_gamma_combined.executor&quot;: &quot;Run&quot;,
+    &quot;Python.TARN_MAPPO_run_3m_gamma_combined.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.TARN_MAPPO_run_3m_gamma_combined_sharpe.executor&quot;: &quot;Run&quot;,
+    &quot;Python.hugging_face_upload.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scratch.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;v1&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/asas4/바탕 화면/Dokumen/GitHub/Study/Study_RL&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\asas4\바탕 화면\Dokumen\GitHub\Study\Study_RL" />
